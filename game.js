@@ -38,12 +38,26 @@ let playerHits = 0;  // hits the AI has landed on the player
 let aiHits = 0;      // hits the player has landed on the AI
 
 // --- AI State (Hunt/Target algorithm) ---
-// The AI has two modes:
-//   Hunt mode: fire at random untried cells
-//   Target mode: after a hit, systematically try adjacent cells
-let aiShotHistory = [];        // Set-like array of "r,c" strings to avoid repeat shots
-let aiTargetQueue = [];        // Queue of cells to try in target mode
-let aiLastHitCells = [];       // Track consecutive hits for current target ship
+// The AI uses a state machine with these phases:
+//   HUNT: fire at random untried cells until a hit is scored
+//   TARGET: after the first hit (origin), probe adjacent cells to
+//     determine orientation, then lock onto that axis and fire in
+//     both directions until the ship is sunk.
+//
+// State variables:
+//   aiShotHistory    - Set of "r,c" strings; prevents repeat shots
+//   aiOriginHit      - {r,c} of the first hit on the current target ship
+//   aiHitCells       - array of {r,c} for consecutive hits on the current target
+//   aiOrientation    - null | 'horizontal' | 'vertical'; locked after 2nd hit
+//   aiDirection      - current direction index into the axis being pursued
+//                      (0 = positive direction, 1 = negative direction)
+//   aiTriedAxes      - tracks which axes have been attempted ('horizontal'/'vertical')
+let aiShotHistory = [];
+let aiOriginHit = null;
+let aiHitCells = [];
+let aiOrientation = null;
+let aiDirection = 0;
+let aiTriedAxes = [];
 
 // --- DOM References ---
 const playerBoardEl = document.getElementById('player-board');
@@ -114,8 +128,11 @@ function initGame() {
 
   // Reset AI state
   aiShotHistory = [];
-  aiTargetQueue = [];
-  aiLastHitCells = [];
+  aiOriginHit = null;
+  aiHitCells = [];
+  aiOrientation = null;
+  aiDirection = 0;
+  aiTriedAxes = [];
 
   // Reset UI phase
   gamePhase = 'placement';
@@ -414,44 +431,190 @@ function onAiBoardClick(r, c) {
 }
 
 // ============================================================
-// AI TURN — Hunt/Target Algorithm
+// AI TURN — Hunt/Target Algorithm (orientation-locked)
 // ============================================================
-// The AI operates in two modes:
+// The AI operates as a state machine:
 //
-// HUNT MODE: Fires at random cells it hasn't tried yet, looking
-//   for a hit. This is the default mode.
+// HUNT MODE (aiOriginHit === null):
+//   Fires at random untried cells until it scores a hit.
+//   On hit, stores the cell as aiOriginHit and enters target mode.
 //
-// TARGET MODE: Once the AI scores a hit, it adds the four
-//   adjacent cells (up, down, left, right) to a target queue.
-//   It then fires at cells from this queue. If another hit occurs,
-//   more adjacent cells are added. When the targeted ship is sunk,
-//   the queue and hit tracking are cleared and the AI returns to
-//   hunt mode.
+// TARGET MODE (aiOriginHit !== null):
+//   Phase 1 — No orientation yet (aiOrientation === null):
+//     Probes adjacent cells around the origin hit (up/down/left/right)
+//     one at a time. On a second hit, determines orientation:
+//       same row → horizontal, same column → vertical.
+//
+//   Phase 2 — Orientation locked:
+//     Fires along the locked axis in the current direction.
+//     On hit, continues in the same direction.
+//     On miss or boundary, reverses direction from the origin hit.
+//     If both directions are exhausted without sinking, tries the
+//     perpendicular axis (handles adjacent-ship edge case).
+//
+//   On sinking: clears all target state and returns to hunt mode.
 // ============================================================
 
 /**
- * Executes one AI turn — either from the target queue or a random shot.
+ * Clears all AI targeting state, returning to hunt mode.
+ */
+function aiClearTargetState() {
+  aiOriginHit = null;
+  aiHitCells = [];
+  aiOrientation = null;
+  aiDirection = 0;
+  aiTriedAxes = [];
+}
+
+/**
+ * Returns true if the AI has already fired at (r, c).
+ */
+function aiHasFiredAt(r, c) {
+  return aiShotHistory.includes(`${r},${c}`);
+}
+
+/**
+ * Returns true if (r, c) is within the 10x10 grid.
+ */
+function aiIsValidCell(r, c) {
+  return r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE;
+}
+
+/**
+ * Generates a random shot for hunt mode.
+ * Picks a random cell that hasn't been fired at yet.
+ */
+function aiHuntShot() {
+  let r, c;
+  do {
+    r = Math.floor(Math.random() * GRID_SIZE);
+    c = Math.floor(Math.random() * GRID_SIZE);
+  } while (aiHasFiredAt(r, c));
+  return [r, c];
+}
+
+/**
+ * Returns the direction deltas for a given orientation.
+ * Each orientation has two directions: positive (index 0) and negative (index 1).
+ *   horizontal: [right, left]
+ *   vertical:   [down, up]
+ */
+function aiGetDirectionDeltas(orient) {
+  if (orient === 'horizontal') {
+    return [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
+  } else {
+    return [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }];
+  }
+}
+
+/**
+ * Finds the next valid target cell along the current axis and direction.
+ * Walks from the origin hit in the given direction, skipping over
+ * already-hit cells, until it finds an untried cell or hits a boundary/miss.
+ * Returns {r, c} if a valid target is found, or null otherwise.
+ */
+function aiFindNextAlongAxis(orient, dirIndex) {
+  const deltas = aiGetDirectionDeltas(orient);
+  const delta = deltas[dirIndex];
+  let step = 1;
+
+  while (true) {
+    const nr = aiOriginHit.r + delta.dr * step;
+    const nc = aiOriginHit.c + delta.dc * step;
+
+    // Out of bounds — no valid target in this direction
+    if (!aiIsValidCell(nr, nc)) return null;
+
+    // Already fired here
+    if (aiHasFiredAt(nr, nc)) {
+      // If it was a hit, keep walking past it
+      if (playerBoard[nr][nc] === 'hit') {
+        step++;
+        continue;
+      }
+      // It was a miss — this direction is exhausted
+      return null;
+    }
+
+    // Found an untried cell — this is our target
+    return { r: nr, c: nc };
+  }
+}
+
+/**
+ * Computes the AI's next target-mode shot.
+ * Returns {r, c} or null if target mode should fall back to hunt.
+ */
+function aiGetTargetShot() {
+  // --- Phase 1: Orientation not yet determined ---
+  // Probe the four neighbors of the origin hit to find a second hit
+  if (aiOrientation === null) {
+    const probeDirections = [
+      { r: aiOriginHit.r, c: aiOriginHit.c + 1 },  // right
+      { r: aiOriginHit.r, c: aiOriginHit.c - 1 },  // left
+      { r: aiOriginHit.r + 1, c: aiOriginHit.c },   // down
+      { r: aiOriginHit.r - 1, c: aiOriginHit.c },   // up
+    ];
+    for (const pos of probeDirections) {
+      if (aiIsValidCell(pos.r, pos.c) && !aiHasFiredAt(pos.r, pos.c)) {
+        return pos;
+      }
+    }
+    // All adjacent cells tried with no second hit — clear and hunt
+    return null;
+  }
+
+  // --- Phase 2: Orientation is locked — fire along the axis ---
+  const target = aiFindNextAlongAxis(aiOrientation, aiDirection);
+  if (target) return target;
+
+  // Current direction exhausted — try reversing
+  const reversedDir = aiDirection === 0 ? 1 : 0;
+  const reverseTarget = aiFindNextAlongAxis(aiOrientation, reversedDir);
+  if (reverseTarget) {
+    aiDirection = reversedDir;
+    return reverseTarget;
+  }
+
+  // Both directions on this axis exhausted without sinking.
+  // Try the perpendicular axis (handles adjacent ships edge case).
+  const perpAxis = aiOrientation === 'horizontal' ? 'vertical' : 'horizontal';
+  if (!aiTriedAxes.includes(perpAxis)) {
+    aiTriedAxes.push(aiOrientation);
+    aiOrientation = perpAxis;
+    aiDirection = 0;
+
+    const perpTarget = aiFindNextAlongAxis(perpAxis, 0);
+    if (perpTarget) return perpTarget;
+
+    const perpReverse = aiFindNextAlongAxis(perpAxis, 1);
+    if (perpReverse) {
+      aiDirection = 1;
+      return perpReverse;
+    }
+  }
+
+  // All options exhausted — fall back to hunt
+  return null;
+}
+
+/**
+ * Executes one AI turn using the Hunt/Target state machine.
  */
 function aiTurn() {
   if (gamePhase !== 'playing') return;
 
   let r, c;
 
-  // TARGET MODE: if there are cells in the target queue, try them
-  if (aiTargetQueue.length > 0) {
-    // Pick a cell from the target queue
-    let found = false;
-    while (aiTargetQueue.length > 0 && !found) {
-      const target = aiTargetQueue.shift();
+  // If in target mode, compute the next targeted shot
+  if (aiOriginHit !== null) {
+    const target = aiGetTargetShot();
+    if (target) {
       r = target.r;
       c = target.c;
-      // Only fire if this cell hasn't been shot before
-      if (!aiHasFiredAt(r, c)) {
-        found = true;
-      }
-    }
-    // If no valid target was found, fall through to hunt mode
-    if (!found) {
+    } else {
+      // Target mode exhausted — clear state and fall back to hunt
+      aiClearTargetState();
       [r, c] = aiHuntShot();
     }
   } else {
@@ -472,20 +635,41 @@ function aiTurn() {
     cellEl.classList.add('hit');
     playerHits++;
 
-    // Track this hit for target mode
-    aiLastHitCells.push({ r, c });
+    // Track this hit cell
+    aiHitCells.push({ r, c });
 
-    // Add adjacent cells to the target queue
-    addAdjacentTargets(r, c);
+    // If this is the first hit, store it as the origin and enter target mode
+    if (aiOriginHit === null) {
+      aiOriginHit = { r, c };
+    } else if (aiOrientation === null) {
+      // Second hit — determine the ship's orientation
+      if (r === aiOriginHit.r) {
+        aiOrientation = 'horizontal';
+      } else {
+        aiOrientation = 'vertical';
+      }
+      aiTriedAxes.push(aiOrientation);
+
+      // Set direction based on which way the second hit went
+      const deltas = aiGetDirectionDeltas(aiOrientation);
+      const dr = r - aiOriginHit.r;
+      const dc = c - aiOriginHit.c;
+      // If the delta matches the positive direction, keep direction 0
+      // otherwise switch to direction 1
+      if (dr === deltas[0].dr && dc === deltas[0].dc || (dr > 0 && deltas[0].dr > 0) || (dc > 0 && deltas[0].dc > 0)) {
+        aiDirection = 0;
+      } else {
+        aiDirection = 1;
+      }
+    }
 
     // Check if a player ship was sunk
     const sunkShip = checkShipSunk(placedShips, playerBoard);
     if (sunkShip) {
       markSunkShip(playerBoardEl, placedShips[sunkShip]);
 
-      // Ship is sunk — clear target state and return to hunt mode
-      aiTargetQueue = [];
-      aiLastHitCells = [];
+      // Ship is sunk — fully clear targeting state, return to hunt mode
+      aiClearTargetState();
 
       const prevMsg = messageEl.textContent;
       setMessage(`${prevMsg} | AI sunk your ${capitalize(sunkShip)}!`);
@@ -503,57 +687,12 @@ function aiTurn() {
       return;
     }
   } else {
-    // MISS
+    // MISS — the shot didn't hit anything
     playerBoard[r][c] = 'miss';
     cellEl.classList.add('miss');
+    // Note: direction reversal and axis switching are handled by
+    // aiGetTargetShot() on the next turn via aiFindNextAlongAxis().
   }
-}
-
-/**
- * Returns true if the AI has already fired at (r, c).
- */
-function aiHasFiredAt(r, c) {
-  return aiShotHistory.includes(`${r},${c}`);
-}
-
-/**
- * Generates a random shot for hunt mode.
- * Picks a random cell that hasn't been fired at yet.
- */
-function aiHuntShot() {
-  let r, c;
-  do {
-    r = Math.floor(Math.random() * GRID_SIZE);
-    c = Math.floor(Math.random() * GRID_SIZE);
-  } while (aiHasFiredAt(r, c));
-  return [r, c];
-}
-
-/**
- * Adds the four adjacent cells (up, down, left, right) of (r, c) to
- * the AI's target queue, filtering out any that are out of bounds or
- * already fired upon.
- */
-function addAdjacentTargets(r, c) {
-  const directions = [
-    { r: r - 1, c: c },  // up
-    { r: r + 1, c: c },  // down
-    { r: r, c: c - 1 },  // left
-    { r: r, c: c + 1 },  // right
-  ];
-  directions.forEach(pos => {
-    if (
-      pos.r >= 0 && pos.r < GRID_SIZE &&
-      pos.c >= 0 && pos.c < GRID_SIZE &&
-      !aiHasFiredAt(pos.r, pos.c)
-    ) {
-      // Avoid adding duplicates to the queue
-      const alreadyQueued = aiTargetQueue.some(t => t.r === pos.r && t.c === pos.c);
-      if (!alreadyQueued) {
-        aiTargetQueue.push(pos);
-      }
-    }
-  });
 }
 
 // ============================================================
