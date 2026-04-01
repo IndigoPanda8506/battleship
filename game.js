@@ -654,6 +654,11 @@ function renderStatusPanel(containerEl, side) {
     row.classList.add('status-row');
     row.dataset.ship = ship.name;
 
+    // AI fleet rows are hidden until the player scores a hit on that ship
+    if (side === 'ai') {
+      row.classList.add('status-hidden');
+    }
+
     // Ship name label
     const nameEl = document.createElement('span');
     nameEl.classList.add('ship-name');
@@ -708,6 +713,16 @@ function updateStatusPanel(containerEl, ships, board, side) {
     positions.forEach(pos => {
       if (board[pos.r][pos.c] === 'hit') hitCount++;
     });
+
+    // For the AI fleet, only reveal a ship row once it has been hit at least once
+    if (side === 'ai') {
+      if (hitCount > 0) {
+        row.classList.remove('status-hidden');
+      } else {
+        row.classList.add('status-hidden');
+        return;
+      }
+    }
 
     // Update each block in the health bar
     for (let i = 0; i < blocks.length; i++) {

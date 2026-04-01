@@ -343,3 +343,8 @@ h1 {
 .status-row.sunk .sunk-label {
   display: inline;
 }
+
+/* Hidden AI ship rows — not revealed until the player hits that ship */
+.status-row.status-hidden {
+  display: none;
+}
