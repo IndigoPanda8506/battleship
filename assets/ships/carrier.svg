@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 40" preserveAspectRatio="none">
+  <!-- Carrier: 5 cells, large flat-top aircraft carrier silhouette -->
+  <!-- Primary color: Steel gray #6B7B8D -->
+  <defs>
+    <style>
+      .hull { fill: #6B7B8D; }
+      .deck { fill: #7D8E9E; }
+      .detail { fill: #4A5A6A; }
+      .runway { fill: #5A6A7A; }
+    </style>
+  </defs>
+  <!-- Hull outline -->
+  <rect class="hull" x="4" y="8" width="202" height="24" rx="2"/>
+  <!-- Bow taper -->
+  <polygon class="hull" points="206,12 214,20 206,28"/>
+  <!-- Stern taper -->
+  <polygon class="hull" points="4,12 -2,20 4,28"/>
+  <!-- Flight deck -->
+  <rect class="deck" x="12" y="10" width="186" height="20" rx="1"/>
+  <!-- Runway stripe -->
+  <rect class="runway" x="20" y="18" width="170" height="4"/>
+  <!-- Island superstructure -->
+  <rect class="detail" x="140" y="10" width="16" height="8" rx="1"/>
+  <rect class="detail" x="142" y="6" width="4" height="4"/>
+  <!-- Deck markings - pixel blocks -->
+  <rect class="detail" x="30" y="14" width="4" height="4"/>
+  <rect class="detail" x="50" y="14" width="4" height="4"/>
+  <rect class="detail" x="70" y="14" width="4" height="4"/>
+  <rect class="detail" x="90" y="14" width="4" height="4"/>
+  <rect class="detail" x="110" y="14" width="4" height="4"/>
+  <!-- Deck markings lower -->
+  <rect class="detail" x="30" y="24" width="4" height="4"/>
+  <rect class="detail" x="50" y="24" width="4" height="4"/>
+  <rect class="detail" x="70" y="24" width="4" height="4"/>
+  <rect class="detail" x="90" y="24" width="4" height="4"/>
+  <rect class="detail" x="110" y="24" width="4" height="4"/>
+  <!-- Elevator platforms -->
+  <rect class="runway" x="36" y="12" width="8" height="6"/>
+  <rect class="runway" x="100" y="12" width="8" height="6"/>
+</svg>
