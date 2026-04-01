@@ -67,7 +67,6 @@ let playerTurnActive = false;
 // --- DOM References ---
 const playerBoardEl = document.getElementById('player-board');
 const aiBoardEl = document.getElementById('ai-board');
-const messageEl = document.getElementById('message');
 const turnIndicatorEl = document.getElementById('turn-indicator');
 const placementControls = document.getElementById('placement-controls');
 const rotateBtn = document.getElementById('rotate-btn');
@@ -158,8 +157,8 @@ function initGame() {
 
   // Reset turn management
   playerTurnActive = false;
-  turnIndicatorEl.classList.remove('visible');
-  setTurnIndicator('', '');
+  turnIndicatorEl.classList.add('visible');
+  setTurnIndicator('Place your ships! Select a ship, then click on your grid.', 'state-player-turn');
 
   // Render boards
   renderBoard(playerBoardEl, onPlayerBoardClick);
@@ -178,7 +177,6 @@ function initGame() {
   renderStatusPanel(playerStatusEl, 'player');
   renderStatusPanel(aiStatusEl, 'ai');
 
-  setMessage('Place your ships! Select a ship, then click on your grid.');
 }
 
 // ============================================================
@@ -287,13 +285,13 @@ function onPlayerBoardClick(r, c) {
 
   // Check if this ship has already been placed
   if (placedShips[currentShip.name]) {
-    setMessage(`${capitalize(currentShip.name)} is already placed. Select another ship.`);
+    setTurnIndicator(`${capitalize(currentShip.name)} is already placed. Select another ship.`, 'state-player-turn');
     return;
   }
 
   // Validate placement
   if (!canPlaceShip(playerBoard, r, c, currentShip.size, orientation)) {
-    setMessage('Invalid placement! Ship goes out of bounds or overlaps another ship.');
+    setTurnIndicator('Invalid placement! Ship goes out of bounds or overlaps another ship.', 'state-player-miss');
     return;
   }
 
@@ -326,7 +324,7 @@ function onPlayerBoardClick(r, c) {
   const nextShip = SHIPS.find(s => !placedShips[s.name]);
   if (nextShip) {
     selectShip(nextShip.name);
-    setMessage(`${capitalize(currentShip.name)} placed! Now place your ${capitalize(nextShip.name)} (${nextShip.size}).`);
+    setTurnIndicator(`${capitalize(currentShip.name)} placed! Now place your ${capitalize(nextShip.name)} (${nextShip.size}).`, 'state-player-turn');
   }
 }
 
@@ -384,7 +382,6 @@ function startGame() {
   setTurnIndicator('Your Turn — Select a cell on the AI\'s grid to fire', 'state-player-turn');
   playerTurnActive = true;
 
-  setMessage('All ships placed! Click on Enemy Waters to fire.');
 }
 
 // ============================================================
@@ -402,7 +399,7 @@ function onAiBoardClick(r, c) {
   // Prevent firing on the same cell twice
   const cellEl = getCell(aiBoardEl, r, c);
   if (cellEl.classList.contains('hit') || cellEl.classList.contains('miss') || cellEl.classList.contains('sunk')) {
-    setMessage('You already fired there! Choose a different cell.');
+    setTurnIndicator('You already fired there! Choose a different cell.', 'state-player-turn');
     return;
   }
 
@@ -421,10 +418,8 @@ function onAiBoardClick(r, c) {
     const sunkShip = checkShipSunk(aiShips, aiBoard);
     if (sunkShip) {
       markSunkShip(aiBoardEl, aiShips[sunkShip]);
-      setMessage(`You sunk the AI's ${capitalize(sunkShip)}!`);
       setTurnIndicator(`You sunk the AI's ${capitalize(sunkShip)}! — AI is thinking...`, 'state-player-sunk');
     } else {
-      setMessage('Hit!');
       setTurnIndicator('Hit! You struck an enemy ship — AI is thinking...', 'state-player-hit');
     }
 
@@ -440,7 +435,6 @@ function onAiBoardClick(r, c) {
     // MISS
     aiBoard[r][c] = 'miss';
     cellEl.classList.add('miss');
-    setMessage('Miss!');
     setTurnIndicator('Miss! No ship there — AI is thinking...', 'state-player-miss');
   }
 
@@ -708,10 +702,8 @@ function aiTurn() {
       // Ship is sunk — fully clear targeting state, return to hunt mode
       aiClearTargetState();
 
-      setMessage(`AI sunk your ${capitalize(sunkShip)}!`);
       setTurnIndicator(`AI sunk your ${capitalize(sunkShip)}!`, 'state-ai-sunk');
     } else {
-      setMessage('AI Hit your ship!');
       setTurnIndicator('AI Hit your ship!', 'state-ai-hit');
     }
 
@@ -727,7 +719,6 @@ function aiTurn() {
     // MISS — the shot didn't hit anything
     playerBoard[r][c] = 'miss';
     cellEl.classList.add('miss');
-    setMessage('AI Missed!');
     setTurnIndicator('AI Missed!', 'state-ai-miss');
     // Note: direction reversal and axis switching are handled by
     // aiGetTargetShot() on the next turn via aiFindNextAlongAxis().
@@ -786,11 +777,9 @@ function endGame(winner) {
   aiBoardEl.classList.add('disabled');
 
   if (winner === 'player') {
-    setMessage('YOU WIN! All enemy ships have been sunk!');
-    setTurnIndicator('VICTORY! All enemy ships destroyed!', 'state-ai-miss');
+    setTurnIndicator('VICTORY! You sunk all enemy ships!', 'state-ai-miss');
   } else {
-    setMessage('YOU LOSE! The AI has sunk all your ships!');
-    setTurnIndicator('DEFEAT! Your fleet has been destroyed!', 'state-ai-hit');
+    setTurnIndicator('DEFEAT! The AI sunk your entire fleet!', 'state-ai-hit');
   }
 
   // Reveal remaining AI ships on the board
@@ -929,13 +918,6 @@ function updateStatusPanel(containerEl, ships, board, side) {
 // ============================================================
 // UTILITY FUNCTIONS
 // ============================================================
-
-/**
- * Updates the on-screen message.
- */
-function setMessage(text) {
-  messageEl.textContent = text;
-}
 
 /**
  * Updates the turn indicator element with text and a CSS state class.

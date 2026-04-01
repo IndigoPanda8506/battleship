@@ -96,21 +96,6 @@ h1 {
   background: #3a1a1a;
 }
 
-/* Status message area */
-#message {
-  font-size: 1.2rem;
-  margin: 10px 0 15px;
-  padding: 10px 24px;
-  background: #162a4a;
-  border: 1px solid #2a4a7a;
-  border-radius: 8px;
-  text-align: center;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 /* Ship placement controls */
 #placement-controls {
   display: flex;
