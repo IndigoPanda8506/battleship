@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battleship</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Battleship</h1>
+
+  <!-- Message area for game status updates -->
+  <div id="message">Place your ships! Select a ship, then click on your grid.</div>
+
+  <!-- Ship placement controls -->
+  <div id="placement-controls">
+    <div id="ship-selector">
+      <button class="ship-btn selected" data-ship="carrier" data-size="5">Carrier (5)</button>
+      <button class="ship-btn" data-ship="battleship" data-size="4">Battleship (4)</button>
+      <button class="ship-btn" data-ship="cruiser" data-size="3">Cruiser (3)</button>
+      <button class="ship-btn" data-ship="submarine" data-size="3">Submarine (3)</button>
+      <button class="ship-btn" data-ship="destroyer" data-size="2">Destroyer (2)</button>
+    </div>
+    <button id="rotate-btn">Rotate (Horizontal)</button>
+  </div>
+
+  <!-- Game boards container -->
+  <div id="boards">
+    <div class="board-container">
+      <h2>Your Fleet</h2>
+      <div id="player-board" class="board"></div>
+    </div>
+    <div class="board-container">
+      <h2>Enemy Waters</h2>
+      <div id="ai-board" class="board"></div>
+    </div>
+  </div>
+
+  <!-- New Game button -->
+  <button id="new-game-btn">New Game</button>
+
+  <script src="game.js"></script>
+</body>
+</html>

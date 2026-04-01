@@ -1,0 +1,246 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #0a1628;
+  color: #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  color: #4fc3f7;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+/* Status message area */
+#message {
+  font-size: 1.2rem;
+  margin: 10px 0 15px;
+  padding: 10px 24px;
+  background: #162a4a;
+  border: 1px solid #2a4a7a;
+  border-radius: 8px;
+  text-align: center;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ship placement controls */
+#placement-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+#ship-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ship-btn {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  border: 2px solid #4fc3f7;
+  background: transparent;
+  color: #4fc3f7;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ship-btn:hover {
+  background: #1a3a5c;
+}
+
+.ship-btn.selected {
+  background: #4fc3f7;
+  color: #0a1628;
+  font-weight: bold;
+}
+
+.ship-btn.placed {
+  border-color: #555;
+  color: #555;
+  cursor: default;
+  opacity: 0.5;
+}
+
+.ship-btn.placed.selected {
+  background: #555;
+  color: #333;
+}
+
+#rotate-btn {
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  border: 2px solid #ff9800;
+  background: transparent;
+  color: #ff9800;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#rotate-btn:hover {
+  background: #3a2800;
+}
+
+/* Game boards */
+#boards {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.board-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.board-container h2 {
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+  color: #90caf9;
+  letter-spacing: 1px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(10, 40px);
+  grid-template-rows: repeat(10, 40px);
+  gap: 2px;
+  background: #1a2d47;
+  padding: 4px;
+  border-radius: 6px;
+  border: 2px solid #2a4a7a;
+}
+
+.cell {
+  width: 40px;
+  height: 40px;
+  background: #1e3a5f;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.cell:hover {
+  background: #2a5080;
+}
+
+/* Player board: show placed ships */
+.cell.ship {
+  background: #607d8b;
+}
+
+/* Preview cells during ship placement */
+.cell.preview {
+  background: #4fc3f7;
+  opacity: 0.7;
+}
+
+.cell.preview-invalid {
+  background: #f44336;
+  opacity: 0.7;
+}
+
+/* Hit marker */
+.cell.hit {
+  background: #e53935;
+}
+
+.cell.hit::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ff8a80;
+}
+
+/* Miss marker */
+.cell.miss {
+  background: #263850;
+}
+
+.cell.miss::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #546e7a;
+}
+
+/* Sunk ship on AI board */
+.cell.sunk {
+  background: #b71c1c;
+}
+
+.cell.sunk::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ff5252;
+}
+
+/* Disable pointer events on board when not interactive */
+.board.disabled {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* New Game button */
+#new-game-btn {
+  padding: 12px 32px;
+  font-size: 1.1rem;
+  border: 2px solid #4caf50;
+  background: transparent;
+  color: #4caf50;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+}
+
+#new-game-btn:hover {
+  background: #1b3a1b;
+}
+
+/* Hide placement controls during gameplay */
+#placement-controls.hidden {
+  display: none;
+}
