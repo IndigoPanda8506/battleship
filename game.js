@@ -53,6 +53,8 @@ const placementControls = document.getElementById('placement-controls');
 const rotateBtn = document.getElementById('rotate-btn');
 const newGameBtn = document.getElementById('new-game-btn');
 const shipButtons = document.querySelectorAll('.ship-btn');
+const playerStatusEl = document.getElementById('player-status');
+const aiStatusEl = document.getElementById('ai-status');
 
 // ============================================================
 // INITIALIZATION
@@ -143,6 +145,10 @@ function initGame() {
 
   // Place AI ships randomly
   placeAiShips();
+
+  // Render the ship status panels for both fleets
+  renderStatusPanel(playerStatusEl, 'player');
+  renderStatusPanel(aiStatusEl, 'ai');
 
   setMessage('Place your ships! Select a ship, then click on your grid.');
 }
@@ -381,6 +387,9 @@ function onAiBoardClick(r, c) {
       setMessage('Hit!');
     }
 
+    // Update the AI fleet status panel to reflect the hit
+    updateStatusPanel(aiStatusEl, aiShips, aiBoard, 'ai');
+
     // Check win condition
     if (aiHits >= TOTAL_SHIP_CELLS) {
       endGame('player');
@@ -484,6 +493,9 @@ function aiTurn() {
       const prevMsg = messageEl.textContent;
       setMessage(`${prevMsg} | AI hit your ship!`);
     }
+
+    // Update the player fleet status panel to reflect the hit
+    updateStatusPanel(playerStatusEl, placedShips, playerBoard, 'player');
 
     // Check win condition
     if (playerHits >= TOTAL_SHIP_CELLS) {
@@ -618,6 +630,104 @@ function revealAiShips() {
       }
     });
   }
+}
+
+// ============================================================
+// SHIP STATUS PANEL
+// ============================================================
+// The status panel shows the health of all 5 ships for both
+// the player and the AI. Each ship has a row with its name,
+// a health bar (one block per cell), and a SUNK label.
+// For the AI fleet, undamaged blocks are shown as "unknown"
+// (dashed outline) to avoid revealing ship positions.
+// ============================================================
+
+/**
+ * Renders the initial status panel for a fleet.
+ * @param {HTMLElement} containerEl - the DOM container to render into
+ * @param {'player'|'ai'} side - which fleet this panel represents
+ */
+function renderStatusPanel(containerEl, side) {
+  containerEl.innerHTML = '';
+  SHIPS.forEach(ship => {
+    const row = document.createElement('div');
+    row.classList.add('status-row');
+    row.dataset.ship = ship.name;
+
+    // Ship name label
+    const nameEl = document.createElement('span');
+    nameEl.classList.add('ship-name');
+    nameEl.textContent = capitalize(ship.name);
+    row.appendChild(nameEl);
+
+    // Health bar — one block per cell of the ship
+    const bar = document.createElement('div');
+    bar.classList.add('health-bar');
+    for (let i = 0; i < ship.size; i++) {
+      const block = document.createElement('div');
+      block.classList.add('health-block');
+      // Player blocks start as intact; AI blocks start as unknown
+      block.classList.add(side === 'player' ? 'intact' : 'unknown');
+      bar.appendChild(block);
+    }
+    row.appendChild(bar);
+
+    // SUNK label (hidden until the ship is sunk)
+    const sunkLabel = document.createElement('span');
+    sunkLabel.classList.add('sunk-label');
+    sunkLabel.textContent = 'SUNK';
+    row.appendChild(sunkLabel);
+
+    containerEl.appendChild(row);
+  });
+}
+
+/**
+ * Updates the status panel for a given fleet after a hit.
+ * Counts how many cells of each ship have been hit and updates
+ * the health bar blocks accordingly. Also marks sunk ships.
+ *
+ * @param {HTMLElement} containerEl - the status panel DOM container
+ * @param {Object} ships - the ships object (placedShips or aiShips)
+ * @param {Array[]} board - the board state array
+ * @param {'player'|'ai'} side - which fleet to update
+ */
+function updateStatusPanel(containerEl, ships, board, side) {
+  SHIPS.forEach(ship => {
+    const row = containerEl.querySelector(`.status-row[data-ship="${ship.name}"]`);
+    if (!row) return;
+
+    const blocks = row.querySelectorAll('.health-block');
+    const positions = ships[ship.name];
+
+    // If positions haven't been placed yet (during placement phase), skip
+    if (!positions) return;
+
+    // Count hits on this ship
+    let hitCount = 0;
+    positions.forEach(pos => {
+      if (board[pos.r][pos.c] === 'hit') hitCount++;
+    });
+
+    // Update each block in the health bar
+    for (let i = 0; i < blocks.length; i++) {
+      blocks[i].classList.remove('intact', 'unknown', 'damaged');
+      if (i < hitCount) {
+        // This block represents a hit cell
+        blocks[i].classList.add('damaged');
+      } else {
+        // Undamaged — player shows intact, AI shows unknown
+        blocks[i].classList.add(side === 'player' ? 'intact' : 'unknown');
+      }
+    }
+
+    // Mark the row as sunk if the ship is fully destroyed
+    if (positions.sunk) {
+      row.classList.add('sunk');
+    } else {
+      row.classList.remove('sunk');
+    }
+  });
 }
 
 // ============================================================

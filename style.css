@@ -244,3 +244,102 @@ h1 {
 #placement-controls.hidden {
   display: none;
 }
+
+/* Ship status panel */
+#status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-self: flex-start;
+  margin-top: 26px;
+}
+
+.status-section {
+  background: #162a4a;
+  border: 1px solid #2a4a7a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-width: 180px;
+}
+
+.status-section h3 {
+  font-size: 0.95rem;
+  color: #90caf9;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Each ship row in the status panel */
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.status-row:last-child {
+  margin-bottom: 0;
+}
+
+.ship-name {
+  font-size: 0.8rem;
+  color: #b0bec5;
+  min-width: 80px;
+  white-space: nowrap;
+}
+
+/* Strike-through and gray out sunk ship names */
+.status-row.sunk .ship-name {
+  text-decoration: line-through;
+  color: #555;
+}
+
+/* Health bar container */
+.health-bar {
+  display: flex;
+  gap: 3px;
+}
+
+/* Individual block in the health bar */
+.health-block {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+/* Player fleet: filled blocks show the ship is intact */
+.health-block.intact {
+  background: #607d8b;
+}
+
+/* AI fleet: unrevealed blocks (not yet hit) shown as unknown */
+.health-block.unknown {
+  background: #263850;
+  border: 1px dashed #3a5a7a;
+}
+
+/* Hit block — matches grid hit color */
+.health-block.damaged {
+  background: #e53935;
+}
+
+/* Sunk: all blocks turn dark gray */
+.status-row.sunk .health-block {
+  background: #444;
+}
+
+/* SUNK label */
+.sunk-label {
+  display: none;
+  font-size: 0.7rem;
+  color: #e53935;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.status-row.sunk .sunk-label {
+  display: inline;
+}
