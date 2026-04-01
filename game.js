@@ -59,10 +59,16 @@ let aiOrientation = null;
 let aiDirection = 0;
 let aiTriedAxes = [];
 
+// --- Turn Management State ---
+// Tracks whether it is currently the player's turn.
+// While false the AI board ignores clicks, preventing double-fire.
+let playerTurnActive = false;
+
 // --- DOM References ---
 const playerBoardEl = document.getElementById('player-board');
 const aiBoardEl = document.getElementById('ai-board');
 const messageEl = document.getElementById('message');
+const turnIndicatorEl = document.getElementById('turn-indicator');
 const placementControls = document.getElementById('placement-controls');
 const rotateBtn = document.getElementById('rotate-btn');
 const newGameBtn = document.getElementById('new-game-btn');
@@ -149,6 +155,11 @@ function initGame() {
     btn.classList.remove('selected');
   });
   shipButtons[0].classList.add('selected');
+
+  // Reset turn management
+  playerTurnActive = false;
+  turnIndicatorEl.classList.remove('visible');
+  setTurnIndicator('', '');
 
   // Render boards
   renderBoard(playerBoardEl, onPlayerBoardClick);
@@ -367,6 +378,12 @@ function startGame() {
   gamePhase = 'playing';
   placementControls.classList.add('hidden');
   aiBoardEl.classList.remove('disabled');
+
+  // Activate the turn indicator and set initial state
+  turnIndicatorEl.classList.add('visible');
+  setTurnIndicator('Your Turn — Select a cell on the AI\'s grid to fire', 'state-player-turn');
+  playerTurnActive = true;
+
   setMessage('All ships placed! Click on Enemy Waters to fire.');
 }
 
@@ -379,7 +396,8 @@ function startGame() {
  * This is the player's attack action.
  */
 function onAiBoardClick(r, c) {
-  if (gamePhase !== 'playing') return;
+  // Block clicks when it is not the player's turn or game is over
+  if (gamePhase !== 'playing' || !playerTurnActive) return;
 
   // Prevent firing on the same cell twice
   const cellEl = getCell(aiBoardEl, r, c);
@@ -387,6 +405,10 @@ function onAiBoardClick(r, c) {
     setMessage('You already fired there! Choose a different cell.');
     return;
   }
+
+  // --- Lock the player out immediately ---
+  playerTurnActive = false;
+  aiBoardEl.classList.add('disabled');
 
   // Process the player's shot
   if (aiBoard[r][c] === 'ship') {
@@ -400,8 +422,10 @@ function onAiBoardClick(r, c) {
     if (sunkShip) {
       markSunkShip(aiBoardEl, aiShips[sunkShip]);
       setMessage(`You sunk the AI's ${capitalize(sunkShip)}!`);
+      setTurnIndicator(`You sunk the AI's ${capitalize(sunkShip)}! — AI is thinking...`, 'state-player-sunk');
     } else {
       setMessage('Hit!');
+      setTurnIndicator('Hit! You struck an enemy ship — AI is thinking...', 'state-player-hit');
     }
 
     // Update the AI fleet status panel to reflect the hit
@@ -417,17 +441,30 @@ function onAiBoardClick(r, c) {
     aiBoard[r][c] = 'miss';
     cellEl.classList.add('miss');
     setMessage('Miss!');
+    setTurnIndicator('Miss! No ship there — AI is thinking...', 'state-player-miss');
   }
 
-  // Disable the AI board briefly while the AI takes its turn
-  aiBoardEl.classList.add('disabled');
+  // Short delay so the player can read the result, then hand off to AI
+  const aiDelay = 800 + Math.floor(Math.random() * 200); // 800-1000ms
   setTimeout(() => {
-    aiTurn();
-    // Re-enable the AI board unless the game is over
-    if (gamePhase === 'playing') {
-      aiBoardEl.classList.remove('disabled');
-    }
-  }, 500);
+    // Show "AI is firing" while AI resolves
+    setTurnIndicator('AI is firing...', 'state-ai-firing');
+
+    // Another brief pause for the "AI is firing" message to register
+    setTimeout(() => {
+      aiTurn();
+
+      // After AI turn resolves, return control to the player
+      if (gamePhase === 'playing') {
+        // Show AI result for a moment, then switch back to player turn
+        setTimeout(() => {
+          setTurnIndicator('Your Turn — Select a cell on the AI\'s grid to fire', 'state-player-turn');
+          aiBoardEl.classList.remove('disabled');
+          playerTurnActive = true;
+        }, 600);
+      }
+    }, 400);
+  }, aiDelay);
 }
 
 // ============================================================
@@ -671,11 +708,11 @@ function aiTurn() {
       // Ship is sunk — fully clear targeting state, return to hunt mode
       aiClearTargetState();
 
-      const prevMsg = messageEl.textContent;
-      setMessage(`${prevMsg} | AI sunk your ${capitalize(sunkShip)}!`);
+      setMessage(`AI sunk your ${capitalize(sunkShip)}!`);
+      setTurnIndicator(`AI sunk your ${capitalize(sunkShip)}!`, 'state-ai-sunk');
     } else {
-      const prevMsg = messageEl.textContent;
-      setMessage(`${prevMsg} | AI hit your ship!`);
+      setMessage('AI Hit your ship!');
+      setTurnIndicator('AI Hit your ship!', 'state-ai-hit');
     }
 
     // Update the player fleet status panel to reflect the hit
@@ -690,6 +727,8 @@ function aiTurn() {
     // MISS — the shot didn't hit anything
     playerBoard[r][c] = 'miss';
     cellEl.classList.add('miss');
+    setMessage('AI Missed!');
+    setTurnIndicator('AI Missed!', 'state-ai-miss');
     // Note: direction reversal and axis switching are handled by
     // aiGetTargetShot() on the next turn via aiFindNextAlongAxis().
   }
@@ -743,12 +782,15 @@ function markSunkShip(boardEl, positions) {
  */
 function endGame(winner) {
   gamePhase = 'gameover';
+  playerTurnActive = false;
   aiBoardEl.classList.add('disabled');
 
   if (winner === 'player') {
     setMessage('YOU WIN! All enemy ships have been sunk!');
+    setTurnIndicator('VICTORY! All enemy ships destroyed!', 'state-ai-miss');
   } else {
     setMessage('YOU LOSE! The AI has sunk all your ships!');
+    setTurnIndicator('DEFEAT! Your fleet has been destroyed!', 'state-ai-hit');
   }
 
   // Reveal remaining AI ships on the board
@@ -893,6 +935,24 @@ function updateStatusPanel(containerEl, ships, board, side) {
  */
 function setMessage(text) {
   messageEl.textContent = text;
+}
+
+/**
+ * Updates the turn indicator element with text and a CSS state class.
+ * Removes all previous state-* classes before applying the new one.
+ * @param {string} text - the indicator message
+ * @param {string} stateClass - CSS class (e.g. 'state-player-turn')
+ */
+function setTurnIndicator(text, stateClass) {
+  turnIndicatorEl.textContent = text;
+  // Strip previous state classes
+  turnIndicatorEl.className = turnIndicatorEl.className
+    .split(' ')
+    .filter(c => !c.startsWith('state-'))
+    .join(' ');
+  if (stateClass) {
+    turnIndicatorEl.classList.add(stateClass);
+  }
 }
 
 /**
