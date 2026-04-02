@@ -425,8 +425,10 @@ function onAiBoardClick(r, c) {
       // Reveal the sunk ship's SVG icon in darkened state on the AI board
       renderShipIcon(aiBoardEl, sunkShip, aiShips[sunkShip], true);
       setTurnIndicator(`You sunk the AI's ${capitalize(sunkShip)}! — AI is thinking...`, 'state-player-sunk');
+      showAdmiralTaunt('playerSunk');
     } else {
       setTurnIndicator('Hit! You struck an enemy ship — AI is thinking...', 'state-player-hit');
+      showAdmiralTaunt('playerHit');
     }
 
     // Update the AI fleet status panel to reflect the hit
@@ -442,6 +444,7 @@ function onAiBoardClick(r, c) {
     aiBoard[r][c] = 'miss';
     cellEl.classList.add('miss');
     setTurnIndicator('Miss! No ship there — AI is thinking...', 'state-player-miss');
+    showAdmiralTaunt('playerMiss');
   }
 
   // Short delay so the player can read the result, then hand off to AI
@@ -712,6 +715,7 @@ function aiTurn() {
       aiClearTargetState();
 
       setTurnIndicator(`AI sunk your ${capitalize(sunkShip)}!`, 'state-ai-sunk');
+      showAdmiralTaunt('enemySunk');
     } else {
       setTurnIndicator('AI Hit your ship!', 'state-ai-hit');
     }
@@ -787,8 +791,10 @@ function endGame(winner) {
 
   if (winner === 'player') {
     setTurnIndicator('VICTORY! You sunk all enemy ships!', 'state-ai-miss');
+    showAdmiralTaunt('playerWin');
   } else {
     setTurnIndicator('DEFEAT! The AI sunk your entire fleet!', 'state-ai-hit');
+    showAdmiralTaunt('playerLose');
   }
 
   // Reveal remaining AI ships on the board
@@ -926,6 +932,91 @@ function updateStatusPanel(containerEl, ships, board, side) {
       row.classList.remove('sunk');
     }
   });
+}
+
+// ============================================================
+// ADMIRAL TAUNT SYSTEM
+// ============================================================
+// The enemy admiral taunts the player based on game events.
+// Each event has a pool of 3–5 taunts randomly selected.
+// Taunts fade in and auto-clear after 3 seconds.
+// ============================================================
+
+const admiralTauntEl = document.getElementById('admiral-taunt');
+let tauntTimeout = null;
+
+/** Taunt pools keyed by game event */
+const ADMIRAL_TAUNTS = {
+  playerMiss: [
+    "Couldn't hit the broad side of a battleship, Commander.",
+    "Were you aiming at the fish? Because you missed everything else.",
+    "My grandmother could aim better, and she's been at sea for sixty years.",
+    "The ocean thanks you for the free depth charge, Commander.",
+    "Perhaps you should try closing one eye. Or both.",
+  ],
+  playerHit: [
+    "A lucky shot. Don't get comfortable.",
+    "Even a broken clock strikes twice. Enjoy it while it lasts.",
+    "You scratched the paint. My crew will not be pleased.",
+    "Hmph. The sea giveth, and the sea taketh away.",
+    "One hit does not win a war, Commander.",
+  ],
+  playerSunk: [
+    "You'll pay for that.",
+    "That vessel had a proud history. You'll answer for this.",
+    "Impressive... for an amateur. Don't let it go to your head.",
+    "My fleet is vast. One ship means nothing.",
+    "A minor setback. The tide will turn.",
+  ],
+  enemySunk: [
+    "Another one lost to the deep. Tragic.",
+    "Your fleet shrinks by the hour, Commander.",
+    "The sea claims another of your precious vessels. Pity.",
+    "How many more must sink before you surrender?",
+    "I do love the sound of steel meeting the ocean floor.",
+  ],
+  playerWin: [
+    "The sea\u2026 she favors you today.",
+    "You have won this battle, Commander. But the war is far from over.",
+    "I concede. You are a worthy adversary.",
+    "My fleet is lost\u2026 but mark my words, we shall meet again.",
+    "Well played, Commander. The ocean remembers the bold.",
+  ],
+  playerLose: [
+    "The ocean floor is a fine resting place for fools.",
+    "Victory is mine. As it was always meant to be.",
+    "Your fleet rests beneath the waves now. A fitting end.",
+    "Did you truly think you could best me? How quaint.",
+    "The sea is mine, Commander. It always has been.",
+  ],
+};
+
+/**
+ * Displays a random admiral taunt for the given event.
+ * Fades in, then auto-clears after 3 seconds.
+ * Non-blocking — never pauses or interrupts gameplay.
+ * @param {'playerMiss'|'playerHit'|'playerSunk'|'enemySunk'|'playerWin'|'playerLose'} event
+ */
+function showAdmiralTaunt(event) {
+  const pool = ADMIRAL_TAUNTS[event];
+  if (!pool || pool.length === 0) return;
+
+  const taunt = pool[Math.floor(Math.random() * pool.length)];
+  admiralTauntEl.textContent = taunt;
+
+  // Clear any existing timeout so rapid events reset the timer
+  if (tauntTimeout) {
+    clearTimeout(tauntTimeout);
+  }
+
+  // Fade in
+  admiralTauntEl.classList.add('visible');
+
+  // Auto-clear after 3 seconds
+  tauntTimeout = setTimeout(() => {
+    admiralTauntEl.classList.remove('visible');
+    tauntTimeout = null;
+  }, 3000);
 }
 
 // ============================================================
