@@ -16,6 +16,11 @@ const SHIPS = [
 ];
 const TOTAL_SHIP_CELLS = SHIPS.reduce((sum, s) => sum + s.size, 0); // 17
 
+// --- Nuke Feature Flag ---
+// Set to false to instantly disable the entire nuke mechanic.
+// When disabled, no nuke squares are placed and all nuke logic is skipped.
+const NUKE_ENABLED = true;
+
 // --- Game State ---
 // Each board is a 10x10 2D array. Cell values:
 //   null  = empty water
@@ -58,6 +63,10 @@ let aiHitCells = [];
 let aiOrientation = null;
 let aiDirection = 0;
 let aiTriedAxes = [];
+
+// --- Nuke State (see NUKE SYSTEM section for full documentation) ---
+let nukeSquareAi = null;      // {r,c} — hidden nuke position on AI board
+let nukeSquarePlayer = null;  // {r,c} — hidden nuke position on player board
 
 // --- Turn Management State ---
 // Tracks whether it is currently the player's turn.
@@ -177,6 +186,12 @@ function initGame() {
   renderStatusPanel(playerStatusEl, 'player');
   renderStatusPanel(aiStatusEl, 'ai');
 
+  // Reset nuke state and hide detonation overlay
+  if (NUKE_ENABLED) {
+    nukeSquareAi = null;
+    nukeSquarePlayer = null;
+    nukeHideOverlay();
+  }
 }
 
 // ============================================================
@@ -385,6 +400,8 @@ function startGame() {
   setTurnIndicator('Your Turn — Select a cell on the AI\'s grid to fire', 'state-player-turn');
   playerTurnActive = true;
 
+  // Initialize nuke squares on both boards
+  if (NUKE_ENABLED) nukeInit();
 }
 
 // ============================================================
@@ -409,6 +426,12 @@ function onAiBoardClick(r, c) {
   // --- Lock the player out immediately ---
   playerTurnActive = false;
   aiBoardEl.classList.add('disabled');
+
+  // --- NUKE CHECK: did the player hit the nuke on the AI board? ---
+  if (NUKE_ENABLED && nukeSquareAi && r === nukeSquareAi.r && c === nukeSquareAi.c) {
+    nukeDetonate('player');
+    return;
+  }
 
   // Process the player's shot
   if (aiBoard[r][c] === 'ship') {
@@ -446,6 +469,9 @@ function onAiBoardClick(r, c) {
     setTurnIndicator('Miss! No ship there — AI is thinking...', 'state-player-miss');
     showAdmiralTaunt('playerMiss');
   }
+
+  // Update nuke proximity hints after the player's shot
+  if (NUKE_ENABLED) nukeUpdateHints();
 
   // Short delay so the player can read the result, then hand off to AI
   const aiDelay = 800 + Math.floor(Math.random() * 200); // 800-1000ms
@@ -664,6 +690,12 @@ function aiTurn() {
 
   // Record this shot so the AI never fires here again
   aiShotHistory.push(`${r},${c}`);
+
+  // --- NUKE CHECK: did the AI hit the nuke on the player board? ---
+  if (NUKE_ENABLED && nukeSquarePlayer && r === nukeSquarePlayer.r && c === nukeSquarePlayer.c) {
+    nukeDetonate('ai');
+    return;
+  }
 
   // Process the shot on the player's board
   const cellEl = getCell(playerBoardEl, r, c);
@@ -1122,6 +1154,182 @@ function darkenShipIcon(boardEl, positions) {
   const icon = firstCell.querySelector('.ship-icon');
   if (icon) {
     icon.classList.add('sunk-icon');
+  }
+}
+
+// ============================================================
+// NUKE SYSTEM (Mutually Assured Destruction)
+// ============================================================
+// At game start, one random cell on EACH board is secretly designated
+// as a hidden "Nuke" square. If either side fires on the enemy's Nuke
+// square, the game ends instantly and the SHOOTER loses — the
+// "mutually assured destruction" theme means attacking the nuke is
+// always self-destructive.
+//
+// A proximity hint system warns the player as unshot squares on the
+// AI board decrease: a 3×3 zone around the nuke glows with escalating
+// intensity. The exact cell is never directly revealed.
+//
+// To disable the entire nuke mechanic, set NUKE_ENABLED = false at
+// the top of this file. All nuke functions check this flag and
+// short-circuit when disabled.
+// ============================================================
+
+/**
+ * Initializes nuke squares on both boards.
+ * Called once when the game transitions from placement to playing.
+ * Each nuke is placed on a random cell (may overlap a ship cell).
+ */
+function nukeInit() {
+  nukeSquareAi = {
+    r: Math.floor(Math.random() * GRID_SIZE),
+    c: Math.floor(Math.random() * GRID_SIZE),
+  };
+  nukeSquarePlayer = {
+    r: Math.floor(Math.random() * GRID_SIZE),
+    c: Math.floor(Math.random() * GRID_SIZE),
+  };
+  // Initial hint update (no hints at game start — all 100 squares unshot)
+  nukeUpdateHints();
+}
+
+/**
+ * Handles nuke detonation. The shooter LOSES.
+ * Displays the dramatic "NUKE DETONATED" overlay and ends the game.
+ * @param {'player'|'ai'} shooter - who fired the fatal shot
+ */
+function nukeDetonate(shooter) {
+  gamePhase = 'gameover';
+  playerTurnActive = false;
+  aiBoardEl.classList.add('disabled');
+
+  // Flash the detonated cell
+  if (shooter === 'player') {
+    const nukeCell = getCell(aiBoardEl, nukeSquareAi.r, nukeSquareAi.c);
+    nukeCell.classList.add('nuke-detonated-cell');
+  } else {
+    const nukeCell = getCell(playerBoardEl, nukeSquarePlayer.r, nukeSquarePlayer.c);
+    nukeCell.classList.add('nuke-detonated-cell');
+  }
+
+  // Clear any proximity hint pulses
+  nukeClearHints();
+
+  // Reveal remaining AI ships
+  revealAiShips();
+
+  // Show the dramatic full-screen overlay
+  const overlay = document.getElementById('nuke-overlay');
+  const resultText = document.getElementById('nuke-result-text');
+
+  if (shooter === 'player') {
+    resultText.textContent = 'You triggered the warhead. Your fleet is vaporized.';
+    setTurnIndicator('YOU DETONATED A NUCLEAR WARHEAD!', 'state-nuke');
+  } else {
+    resultText.textContent = 'The enemy triggered the warhead. The Admiral\'s fleet is vaporized.';
+    setTurnIndicator('THE AI DETONATED A NUCLEAR WARHEAD — YOU WIN!', 'state-nuke');
+  }
+
+  overlay.classList.add('active');
+}
+
+/**
+ * Hides the nuke detonation overlay and cleans up nuke-related
+ * CSS classes. Called when the game is reset via New Game.
+ */
+function nukeHideOverlay() {
+  const overlay = document.getElementById('nuke-overlay');
+  if (overlay) overlay.classList.remove('active');
+  // Remove detonation flash from any cells
+  document.querySelectorAll('.nuke-detonated-cell').forEach(function(el) {
+    el.classList.remove('nuke-detonated-cell');
+  });
+  nukeClearHints();
+}
+
+/**
+ * Returns the number of unshot squares remaining on the AI board.
+ * Used to determine hint intensity — as this count decreases, hints
+ * become more prominent.
+ */
+function nukeCountUnshotSquares() {
+  let count = 0;
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (aiBoard[r][c] !== 'hit' && aiBoard[r][c] !== 'miss') {
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
+/**
+ * Determines the hint intensity level based on remaining unshot
+ * squares on the AI board.
+ * @returns {number} 0 (no hint) through 4 (full panic pulse)
+ *
+ * Thresholds:
+ *   50+ remaining → 0 (no hint)
+ *   30–50         → 1 (barely visible faint red pulse)
+ *   15–30         → 2 (slightly stronger red shimmer)
+ *   5–15          → 3 (clear pulsing glow, hard to ignore)
+ *   last 5        → 4 (full panic pulse — obvious and urgent)
+ */
+function nukeGetHintIntensity() {
+  const remaining = nukeCountUnshotSquares();
+  if (remaining > 50) return 0;
+  if (remaining > 30) return 1;
+  if (remaining > 15) return 2;
+  if (remaining > 5) return 3;
+  return 4;
+}
+
+/**
+ * Removes all nuke hint pulse classes from every cell on the AI board.
+ */
+function nukeClearHints() {
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = getCell(aiBoardEl, r, c);
+      cell.classList.remove('nuke-hint-1', 'nuke-hint-2', 'nuke-hint-3', 'nuke-hint-4');
+    }
+  }
+}
+
+/**
+ * Updates the visual hint on the 3×3 zone surrounding the AI-board
+ * nuke square. Only unshot cells in the zone receive the hint glow;
+ * already-shot cells (hit/miss/sunk) are skipped.
+ *
+ * The glow intensifies as the number of unshot squares decreases,
+ * creating mounting tension as the game progresses.
+ */
+function nukeUpdateHints() {
+  if (!NUKE_ENABLED || !nukeSquareAi) return;
+
+  // Clear previous hint classes before reapplying
+  nukeClearHints();
+
+  const intensity = nukeGetHintIntensity();
+  if (intensity === 0) return; // No hint yet — too many squares remain
+
+  // Apply the appropriate hint class to the 3×3 zone around the nuke
+  const hintClass = 'nuke-hint-' + intensity;
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const r = nukeSquareAi.r + dr;
+      const c = nukeSquareAi.c + dc;
+      if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
+        const cell = getCell(aiBoardEl, r, c);
+        // Only hint on cells that haven't been shot yet
+        if (!cell.classList.contains('hit') &&
+            !cell.classList.contains('miss') &&
+            !cell.classList.contains('sunk')) {
+          cell.classList.add(hintClass);
+        }
+      }
+    }
   }
 }
 

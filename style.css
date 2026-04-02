@@ -458,3 +458,184 @@ h1 {
 .status-row.status-hidden {
   display: none;
 }
+
+/* ============================================================ */
+/* NUKE SYSTEM STYLES                                           */
+/* ============================================================ */
+
+/* --- Nuke Detonation Overlay --- */
+/* Full-screen dramatic game-over screen when a nuke is triggered */
+#nuke-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, #ff4500 0%, #8b0000 30%, #1a0000 70%, #000 100%);
+  z-index: 200;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+#nuke-overlay.active {
+  display: flex;
+  animation: nuke-fadein 0.6s ease-out;
+}
+
+/* White flash effect that fades out over the overlay */
+#nuke-overlay.active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: white;
+  animation: nuke-whiteflash 1.5s ease-out forwards;
+  pointer-events: none;
+}
+
+.nuke-overlay-content {
+  text-align: center;
+  color: #fff;
+  z-index: 1;
+  animation: nuke-shake 0.6s ease-out;
+}
+
+.nuke-icon {
+  font-size: 6rem;
+  animation: nuke-pulse 1.5s ease-in-out infinite;
+  margin-bottom: 20px;
+  color: #ff4500;
+  text-shadow: 0 0 40px #ff4500, 0 0 80px #ff0000;
+}
+
+.nuke-title {
+  font-size: 3rem;
+  color: #ff4500;
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  text-shadow: 0 0 30px #ff4500, 0 0 60px #ff4500;
+  margin: 0 0 10px;
+}
+
+.nuke-subtitle {
+  font-size: 1.2rem;
+  color: #ff8c00;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin: 0 0 30px;
+}
+
+.nuke-result {
+  font-size: 1.3rem;
+  color: #ffd700;
+  font-weight: bold;
+  margin: 0 0 40px;
+}
+
+#nuke-new-game-btn {
+  padding: 14px 40px;
+  font-size: 1.2rem;
+  border: 2px solid #ff4500;
+  background: transparent;
+  color: #ff4500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+#nuke-new-game-btn:hover {
+  background: rgba(255, 69, 0, 0.2);
+  box-shadow: 0 0 20px rgba(255, 69, 0, 0.4);
+}
+
+/* --- Nuke Overlay Animations --- */
+@keyframes nuke-fadein {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes nuke-whiteflash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes nuke-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-10px, -5px); }
+  20% { transform: translate(10px, 5px); }
+  30% { transform: translate(-5px, 10px); }
+  40% { transform: translate(5px, -10px); }
+  50% { transform: translate(-5px, 5px); }
+  60% { transform: translate(5px, -5px); }
+  70% { transform: translate(-3px, 3px); }
+  80% { transform: translate(3px, -3px); }
+  90% { transform: translate(-1px, 1px); }
+}
+
+@keyframes nuke-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+}
+
+/* --- Nuke Detonated Cell --- */
+/* The cell that was shot, triggering the nuke */
+.nuke-detonated-cell {
+  background: #ff4500 !important;
+  animation: nuke-cell-flash 0.4s ease-in-out 3;
+}
+
+@keyframes nuke-cell-flash {
+  0%, 100% { background: #ff4500; }
+  50% { background: #fff; }
+}
+
+/* --- Nuke Hint Pulse Levels --- */
+/* Applied to the 3×3 zone around the nuke on the AI board.     */
+/* Intensity increases as the number of unshot squares decreases. */
+
+/* Level 1: barely visible faint red pulse (30–50 squares left) */
+.nuke-hint-1 {
+  animation: nuke-hint-glow-1 3s ease-in-out infinite;
+}
+
+/* Level 2: slightly stronger red shimmer (15–30 squares left) */
+.nuke-hint-2 {
+  animation: nuke-hint-glow-2 2.5s ease-in-out infinite;
+}
+
+/* Level 3: clear pulsing glow (5–15 squares left) */
+.nuke-hint-3 {
+  animation: nuke-hint-glow-3 2s ease-in-out infinite;
+}
+
+/* Level 4: full panic pulse — obvious and urgent (last 5 squares) */
+.nuke-hint-4 {
+  animation: nuke-hint-glow-4 0.8s ease-in-out infinite;
+}
+
+@keyframes nuke-hint-glow-1 {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: inset 0 0 8px rgba(255, 0, 0, 0.15); }
+}
+
+@keyframes nuke-hint-glow-2 {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.3); }
+}
+
+@keyframes nuke-hint-glow-3 {
+  0%, 100% { box-shadow: inset 0 0 5px rgba(255, 0, 0, 0.2); }
+  50% { box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.5), 0 0 8px rgba(255, 0, 0, 0.3); }
+}
+
+@keyframes nuke-hint-glow-4 {
+  0%, 100% { box-shadow: inset 0 0 8px rgba(255, 0, 0, 0.4); }
+  50% { box-shadow: inset 0 0 20px rgba(255, 50, 0, 0.7), 0 0 15px rgba(255, 0, 0, 0.5); }
+}
+
+/* --- Turn Indicator: Nuke State --- */
+#turn-indicator.state-nuke {
+  background: linear-gradient(135deg, #8b0000, #ff4500);
+  border-color: #ff4500;
+  color: #fff;
+}
