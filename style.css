@@ -207,9 +207,24 @@ h1 {
   background: #2a5080;
 }
 
-/* Player board: show placed ships */
+/* Player board: show placed ships — transparent so SVG shows through */
 .cell.ship {
-  background: #607d8b;
+  background: transparent;
+}
+
+/* Ship SVG icon container — spans across all cells of a ship */
+.ship-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+  image-rendering: pixelated;
+}
+
+/* Sunk ship: darken/desaturate the SVG */
+.ship-icon.sunk-icon {
+  filter: brightness(0.4) saturate(0.3);
 }
 
 /* Preview cells during ship placement */
@@ -223,21 +238,26 @@ h1 {
   opacity: 0.7;
 }
 
-/* Hit marker */
+/* Hit marker — keep background transparent on player board when ship SVG is present */
 .cell.hit {
   background: #e53935;
 }
 
-.cell.hit::after {
-  content: '';
+/* On cells with a ship icon, don't color the background red */
+.cell.hit.has-ship-icon {
+  background: transparent;
+}
+
+/* Explosion emoji overlay for hit cells */
+.explosion-overlay {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #ff8a80;
+  font-size: 22px;
+  z-index: 3;
+  pointer-events: none;
+  line-height: 1;
 }
 
 /* Miss marker */
@@ -257,21 +277,9 @@ h1 {
   background: #546e7a;
 }
 
-/* Sunk ship on AI board */
+/* Sunk ship cells — transparent background so darkened SVG shows */
 .cell.sunk {
-  background: #b71c1c;
-}
-
-.cell.sunk::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #ff5252;
+  background: transparent;
 }
 
 /* Disable pointer events on board when not interactive */

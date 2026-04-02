@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 40" preserveAspectRatio="none">
+  <!-- Battleship: 4 cells, heavy warship with gun turrets -->
+  <!-- Primary color: Dark olive #5A6B4A -->
+  <defs>
+    <style>
+      .hull { fill: #5A6B4A; }
+      .deck { fill: #6A7B5A; }
+      .detail { fill: #3A4B2A; }
+      .turret { fill: #4A5B3A; }
+    </style>
+  </defs>
+  <!-- Hull -->
+  <rect class="hull" x="6" y="10" width="156" height="20" rx="2"/>
+  <!-- Bow -->
+  <polygon class="hull" points="162,14 172,20 162,26"/>
+  <!-- Stern -->
+  <polygon class="hull" points="6,14 0,20 6,26"/>
+  <!-- Deck -->
+  <rect class="deck" x="12" y="12" width="144" height="16" rx="1"/>
+  <!-- Forward turrets (twin guns) -->
+  <rect class="turret" x="20" y="14" width="10" height="12" rx="1"/>
+  <rect class="detail" x="30" y="17" width="8" height="2"/>
+  <rect class="detail" x="30" y="21" width="8" height="2"/>
+  <rect class="turret" x="42" y="14" width="10" height="12" rx="1"/>
+  <rect class="detail" x="52" y="17" width="8" height="2"/>
+  <rect class="detail" x="52" y="21" width="8" height="2"/>
+  <!-- Bridge superstructure -->
+  <rect class="detail" x="72" y="8" width="24" height="24" rx="1"/>
+  <rect class="turret" x="76" y="4" width="6" height="4"/>
+  <rect class="turret" x="84" y="6" width="8" height="4"/>
+  <!-- Aft turret -->
+  <rect class="turret" x="110" y="14" width="10" height="12" rx="1"/>
+  <rect class="detail" x="120" y="17" width="8" height="2"/>
+  <rect class="detail" x="120" y="21" width="8" height="2"/>
+  <!-- Rear turret -->
+  <rect class="turret" x="132" y="14" width="10" height="12" rx="1"/>
+  <rect class="detail" x="142" y="17" width="6" height="2"/>
+  <rect class="detail" x="142" y="21" width="6" height="2"/>
+</svg>
