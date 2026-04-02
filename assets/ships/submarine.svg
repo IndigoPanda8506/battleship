@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 126 40" preserveAspectRatio="none">
+  <!-- Submarine: 3 cells, rounded cigar-shaped hull -->
+  <!-- Primary color: Dark charcoal #4A4A5A -->
+  <defs>
+    <style>
+      .hull { fill: #4A4A5A; }
+      .deck { fill: #5A5A6A; }
+      .detail { fill: #3A3A4A; }
+      .tower { fill: #3E3E50; }
+    </style>
+  </defs>
+  <!-- Main hull - rounded -->
+  <ellipse class="hull" cx="63" cy="22" rx="60" ry="12"/>
+  <!-- Upper deck strip -->
+  <rect class="deck" x="12" y="14" width="102" height="8" rx="4"/>
+  <!-- Conning tower -->
+  <rect class="tower" x="50" y="6" width="16" height="14" rx="2"/>
+  <!-- Periscope -->
+  <rect class="detail" x="56" y="2" width="2" height="6"/>
+  <rect class="detail" x="54" y="2" width="6" height="2"/>
+  <!-- Forward dive planes -->
+  <rect class="detail" x="20" y="10" width="8" height="3" rx="1"/>
+  <rect class="detail" x="20" y="27" width="8" height="3" rx="1"/>
+  <!-- Aft dive planes -->
+  <rect class="detail" x="100" y="10" width="8" height="3" rx="1"/>
+  <rect class="detail" x="100" y="27" width="8" height="3" rx="1"/>
+  <!-- Propeller area -->
+  <rect class="detail" x="118" y="17" width="6" height="6" rx="1"/>
+  <!-- Torpedo tubes (bow detail) -->
+  <rect class="detail" x="4" y="18" width="6" height="2"/>
+  <rect class="detail" x="4" y="22" width="6" height="2"/>
+  <!-- Hull rivets -->
+  <rect class="detail" x="30" y="20" width="2" height="2"/>
+  <rect class="detail" x="40" y="20" width="2" height="2"/>
+  <rect class="detail" x="76" y="20" width="2" height="2"/>
+  <rect class="detail" x="86" y="20" width="2" height="2"/>
+  <rect class="detail" x="96" y="20" width="2" height="2"/>
+</svg>

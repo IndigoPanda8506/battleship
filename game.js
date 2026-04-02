@@ -304,6 +304,9 @@ function onPlayerBoardClick(r, c) {
     getCell(playerBoardEl, pos.r, pos.c).classList.add('ship');
   });
 
+  // Render the ship SVG icon spanning all occupied cells
+  renderShipIcon(playerBoardEl, currentShip.name, positions, false);
+
   // Mark the ship button as placed
   const btn = document.querySelector(`.ship-btn[data-ship="${currentShip.name}"]`);
   if (btn) {
@@ -412,12 +415,15 @@ function onAiBoardClick(r, c) {
     // HIT
     aiBoard[r][c] = 'hit';
     cellEl.classList.add('hit');
+    addExplosionOverlay(cellEl);
     aiHits++;
 
     // Check if an AI ship was sunk
     const sunkShip = checkShipSunk(aiShips, aiBoard);
     if (sunkShip) {
       markSunkShip(aiBoardEl, aiShips[sunkShip]);
+      // Reveal the sunk ship's SVG icon in darkened state on the AI board
+      renderShipIcon(aiBoardEl, sunkShip, aiShips[sunkShip], true);
       setTurnIndicator(`You sunk the AI's ${capitalize(sunkShip)}! — AI is thinking...`, 'state-player-sunk');
       showAdmiralTaunt('playerSunk');
     } else {
@@ -667,6 +673,7 @@ function aiTurn() {
     playerBoard[r][c] = 'hit';
     cellEl.classList.remove('ship');
     cellEl.classList.add('hit');
+    addExplosionOverlay(cellEl);
     playerHits++;
 
     // Track this hit cell
@@ -701,6 +708,8 @@ function aiTurn() {
     const sunkShip = checkShipSunk(placedShips, playerBoard);
     if (sunkShip) {
       markSunkShip(playerBoardEl, placedShips[sunkShip]);
+      // Darken the player's sunk ship SVG icon
+      darkenShipIcon(playerBoardEl, placedShips[sunkShip]);
 
       // Ship is sunk — fully clear targeting state, return to hunt mode
       aiClearTargetState();
@@ -799,6 +808,10 @@ function endGame(winner) {
 function revealAiShips() {
   for (const name in aiShips) {
     const positions = aiShips[name];
+    // Skip ships already revealed as sunk during gameplay
+    if (positions.sunk) continue;
+    // Render the unsunk ship SVG in normal (non-darkened) state
+    renderShipIcon(aiBoardEl, name, positions, false);
     positions.forEach(pos => {
       if (aiBoard[pos.r][pos.c] === 'ship') {
         const cellEl = getCell(aiBoardEl, pos.r, pos.c);
@@ -1004,6 +1017,112 @@ function showAdmiralTaunt(event) {
     admiralTauntEl.classList.remove('visible');
     tauntTimeout = null;
   }, 3000);
+}
+
+// ============================================================
+// SHIP ICON RENDERING
+// ============================================================
+// Renders pixel art SVG ship icons on the grid cells.
+// Player board: ships visible on placement, darkened when sunk.
+// AI board: ships hidden until sunk, then revealed in darkened state.
+// Hit cells display 💥 explosion emoji overlay.
+// ============================================================
+
+/** SVG file paths for each ship type */
+const SHIP_SVG_PATHS = {
+  carrier:    'assets/ships/carrier.svg',
+  battleship: 'assets/ships/battleship.svg',
+  cruiser:    'assets/ships/cruiser.svg',
+  submarine:  'assets/ships/submarine.svg',
+  destroyer:  'assets/ships/destroyer.svg',
+};
+
+/**
+ * Infers ship orientation from its cell positions.
+ * Returns 'horizontal' if all cells share the same row, 'vertical' otherwise.
+ */
+function getShipOrientation(positions) {
+  if (positions.length <= 1) return 'horizontal';
+  return positions[0].r === positions[1].r ? 'horizontal' : 'vertical';
+}
+
+/**
+ * Renders a ship SVG icon spanning all cells of a ship on the board.
+ * The SVG <img> is placed inside the first cell using absolute positioning
+ * and sized to stretch across all occupied cells (including grid gaps).
+ *
+ * @param {HTMLElement} boardEl - the board DOM element
+ * @param {string} shipName - name of the ship (e.g. 'carrier')
+ * @param {Array} positions - array of {r, c} cell positions
+ * @param {boolean} isSunk - whether to render in darkened/sunk state
+ */
+function renderShipIcon(boardEl, shipName, positions, isSunk) {
+  const orient = getShipOrientation(positions);
+  const size = positions.length;
+  const firstPos = positions[0];
+  const firstCell = getCell(boardEl, firstPos.r, firstPos.c);
+
+  // Create the img element for the ship SVG
+  const img = document.createElement('img');
+  img.classList.add('ship-icon');
+  img.src = SHIP_SVG_PATHS[shipName];
+  img.draggable = false;
+
+  // Calculate pixel span: size cells × 40px + (size-1) gaps × 2px
+  const spanPx = size * 42 - 2;
+
+  if (orient === 'horizontal') {
+    img.style.width = spanPx + 'px';
+    img.style.height = '40px';
+  } else {
+    // Vertical: render at horizontal dimensions then rotate 90° clockwise.
+    // rotate(90deg) with origin at top-left rotates the ship so the bow
+    // (left side of SVG) points upward. translateX(40px) shifts it back
+    // into the cell column after rotation.
+    img.style.width = spanPx + 'px';
+    img.style.height = '40px';
+    img.style.transformOrigin = '0 0';
+    img.style.transform = 'translateX(40px) rotate(90deg)';
+  }
+
+  // Apply sunk darkening filter
+  if (isSunk) {
+    img.classList.add('sunk-icon');
+  }
+
+  firstCell.appendChild(img);
+
+  // Mark all cells as having a ship icon (for CSS styling)
+  positions.forEach(pos => {
+    getCell(boardEl, pos.r, pos.c).classList.add('has-ship-icon');
+  });
+}
+
+/**
+ * Adds a 💥 explosion emoji overlay to a hit cell.
+ * The emoji is absolutely positioned and centered on the cell.
+ * Prevents duplicate overlays on the same cell.
+ */
+function addExplosionOverlay(cellEl) {
+  if (cellEl.querySelector('.explosion-overlay')) return;
+  const span = document.createElement('span');
+  span.classList.add('explosion-overlay');
+  span.textContent = '💥';
+  cellEl.appendChild(span);
+}
+
+/**
+ * Darkens an existing ship icon SVG when the ship is sunk.
+ * Finds the .ship-icon img in the first cell of the ship and
+ * adds the sunk-icon class to apply brightness/saturation filter.
+ */
+function darkenShipIcon(boardEl, positions) {
+  const firstPos = positions[0];
+  const firstCell = getCell(boardEl, firstPos.r, firstPos.c);
+  const icon = firstCell.querySelector('.ship-icon');
+  if (icon) {
+    icon.classList.add('sunk-icon');
+  }
 }
 
 // ============================================================

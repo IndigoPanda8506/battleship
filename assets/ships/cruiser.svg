@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 126 40" preserveAspectRatio="none">
+  <!-- Cruiser: 3 cells, sleek mid-size warship -->
+  <!-- Primary color: Navy blue #4A5B7A -->
+  <defs>
+    <style>
+      .hull { fill: #4A5B7A; }
+      .deck { fill: #5A6B8A; }
+      .detail { fill: #3A4560; }
+      .turret { fill: #404E68; }
+    </style>
+  </defs>
+  <!-- Hull -->
+  <rect class="hull" x="6" y="11" width="114" height="18" rx="2"/>
+  <!-- Bow - sharper point -->
+  <polygon class="hull" points="120,14 130,20 120,26"/>
+  <!-- Stern -->
+  <polygon class="hull" points="6,14 0,20 6,26"/>
+  <!-- Deck -->
+  <rect class="deck" x="10" y="13" width="106" height="14" rx="1"/>
+  <!-- Forward turret -->
+  <rect class="turret" x="16" y="15" width="10" height="10" rx="1"/>
+  <rect class="detail" x="26" y="18" width="8" height="2"/>
+  <rect class="detail" x="26" y="21" width="8" height="2"/>
+  <!-- Bridge -->
+  <rect class="detail" x="48" y="9" width="18" height="22" rx="1"/>
+  <rect class="turret" x="52" y="5" width="4" height="4"/>
+  <rect class="turret" x="58" y="7" width="6" height="4"/>
+  <!-- Aft turret -->
+  <rect class="turret" x="80" y="15" width="10" height="10" rx="1"/>
+  <rect class="detail" x="90" y="18" width="8" height="2"/>
+  <rect class="detail" x="90" y="21" width="8" height="2"/>
+  <!-- Funnel -->
+  <rect class="detail" x="70" y="11" width="6" height="6" rx="1"/>
+</svg>
