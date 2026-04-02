@@ -1178,17 +1178,25 @@ function darkenShipIcon(boardEl, positions) {
 /**
  * Initializes nuke squares on both boards.
  * Called once when the game transitions from placement to playing.
- * Each nuke is placed on a random cell (may overlap a ship cell).
+ * Each nuke is placed on a random NON-SHIP cell so that the normal
+ * win condition (sinking all ships) remains reachable for both sides.
  */
 function nukeInit() {
-  nukeSquareAi = {
-    r: Math.floor(Math.random() * GRID_SIZE),
-    c: Math.floor(Math.random() * GRID_SIZE),
-  };
-  nukeSquarePlayer = {
-    r: Math.floor(Math.random() * GRID_SIZE),
-    c: Math.floor(Math.random() * GRID_SIZE),
-  };
+  let r, c;
+  // Place AI-board nuke on a non-ship cell
+  do {
+    r = Math.floor(Math.random() * GRID_SIZE);
+    c = Math.floor(Math.random() * GRID_SIZE);
+  } while (aiBoard[r][c] === 'ship');
+  nukeSquareAi = { r, c };
+
+  // Place player-board nuke on a non-ship cell
+  do {
+    r = Math.floor(Math.random() * GRID_SIZE);
+    c = Math.floor(Math.random() * GRID_SIZE);
+  } while (playerBoard[r][c] === 'ship');
+  nukeSquarePlayer = { r, c };
+
   // Initial hint update (no hints at game start — all 100 squares unshot)
   nukeUpdateHints();
 }
